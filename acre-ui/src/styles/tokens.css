@@ -1,0 +1,20 @@
+:root {
+  --bg-base: #0a0a0a;
+  --bg-card-start: #1a1a1a;
+  --bg-card-end: #000000;
+  --accent-primary: #FF0000;
+  --accent-secondary: #FF6B6B;
+  --text-primary: #FFFFFF;
+  --text-secondary: #888888;
+  --border-default: #2a2a2a;
+  --border-hover: #FF0000;
+
+  --radius-card: 12px;
+  --radius-button: 8px;
+
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 0.2s;
+  --duration-base: 0.5s;
+  --duration-slow: 0.8s;
+  --stagger-gap: 0.1s;
+}

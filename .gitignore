@@ -1,0 +1,15 @@
+# Backend
+acre-backend/venv/
+acre-backend/__pycache__/
+acre-backend/modules/__pycache__/
+acre-backend/.env
+acre-backend/build_log.txt
+acre-backend/*.pyc
+
+# Frontend
+acre-ui/node_modules/
+acre-ui/dist/
+
+# General
+.DS_Store
+*.pyc

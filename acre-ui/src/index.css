@@ -1,0 +1,20 @@
+@import "tailwindcss";
+@import "./styles/tokens.css";
+
+:root {
+  --color-bg-base: #0a0a0a;
+  --color-accent-primary: #FF0000;
+  --color-accent-secondary: #FF6B6B;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #888888;
+  --color-border-default: #2a2a2a;
+  --radius-card: 12px;
+  --radius-button: 8px;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  margin: 0;
+}
