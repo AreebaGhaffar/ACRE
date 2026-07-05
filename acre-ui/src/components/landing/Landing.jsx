@@ -31,11 +31,42 @@ export default function Landing() {
         <div className="flex items-center gap-4 mt-12">
           <button
             onClick={() => navigate("/query")}
-            className="bg-accent-primary text-white text-sm font-semibold px-6 py-3 rounded-button hover:opacity-90 transition-opacity"
+            style={{ 
+              background: "#FF0000",
+              boxShadow: "0 0 20px rgba(255,0,0,0.4)"
+            }}
+            className="text-white text-sm font-semibold px-8 py-3 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-red-500"
+            onMouseEnter={e => {
+              e.target.style.background = "#cc0000";
+              e.target.style.boxShadow = "0 0 35px rgba(255,0,0,0.6)";
+              e.target.style.transform = "scale(1.05)";
+            }}
+            onMouseLeave={e => {
+              e.target.style.background = "#FF0000";
+              e.target.style.boxShadow = "0 0 20px rgba(255,0,0,0.4)";
+              e.target.style.transform = "scale(1)";
+            }}
           >
             Try ACRE
           </button>
-          <button className="bg-transparent text-text-primary text-sm font-semibold px-6 py-3 rounded-button border border-border-default hover:border-white/40 transition-colors">
+          <button
+            style={{ 
+              background: "transparent",
+              border: "1px solid rgba(255,255,255,0.3)"
+            }}
+            className="text-white text-sm font-semibold px-8 py-3 rounded-lg transition-all duration-300"
+            onMouseEnter={e => {
+              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+              e.currentTarget.style.border = "1px solid rgba(255,255,255,0.6)";
+              e.currentTarget.style.transform = "scale(1.05)";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.border = "1px solid rgba(255,255,255,0.3)";
+              e.currentTarget.style.transform = "scale(1)";
+            }}
+            onClick={() => window.open("https://github.com/AreebaGhaffar/ACRE", "_blank")}
+          >
             View on GitHub
           </button>
         </div>
