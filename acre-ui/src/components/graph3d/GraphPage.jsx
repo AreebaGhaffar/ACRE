@@ -21,13 +21,26 @@ const MOCK_EDGES = [
 ];
 
 function buildEdges(nodes) {
-  // auto-generate edges: connect each node to 2-3 nearby nodes by index
   const edges = [];
+  const seen = new Set();
   for (let i = 0; i < nodes.length; i++) {
-    const connections = Math.floor(Math.random() * 2) + 2;
-    for (let c = 0; c < connections; c++) {
-      const target = (i + c + 1) % nodes.length;
-      if (target !== i) edges.push([i, target]);
+    // connect to 2 nearest neighbors
+    for (let j = 1; j <= 2; j++) {
+      const target = (i + j) % nodes.length;
+      const key = `${Math.min(i, target)}-${Math.max(i, target)}`;
+      if (!seen.has(key) && target !== i) {
+        seen.add(key);
+        edges.push([i, target]);
+      }
+    }
+    // connect similar length node names (semantic similarity approximation)
+    for (let k = i + 1; k < nodes.length; k++) {
+      const lenDiff = Math.abs(nodes[i].length - nodes[k].length);
+      const key = `${i}-${k}`;
+      if (lenDiff <= 2 && !seen.has(key)) {
+        seen.add(key);
+        edges.push([i, k]);
+      }
     }
   }
   return edges;
@@ -109,8 +122,8 @@ export default function GraphPage() {
             Knowledge Graph
           </span>
           {usingMock && (
-            <span className="text-[11px] text-yellow-500/70 border border-yellow-500/20 rounded-full px-2 py-0.5">
-              Demo data
+            <span className="text-[11px] text-white/30 border border-white/10 rounded-full px-2 py-0.5">
+              Sample graph
             </span>
           )}
         </div>
