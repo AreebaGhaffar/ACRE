@@ -213,20 +213,35 @@ function StatusDot({ online }) {
 
 function Sidebar() {
   const online = useBackendStatus();
-  const [source, setSource]   = useState("");
-  const [docText, setDocText] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult]   = useState(null);
-  const [error, setError]     = useState(null);
-  const [focused, setFocused] = useState(null);
+  const [source, setSource]     = useState("");
+  const [docText, setDocText]   = useState("");
+  const [pdfFile, setPdfFile]   = useState(null);
+  const [mode, setMode]         = useState("text"); // "text" or "pdf"
+  const [loading, setLoading]   = useState(false);
+  const [result, setResult]     = useState(null);
+  const [error, setError]       = useState(null);
+  const [focused, setFocused]   = useState(null);
 
   const handleIngest = async () => {
-    if (!source.trim() || !docText.trim()) return;
+    if (mode === "text" && (!source.trim() || !docText.trim())) return;
+    if (mode === "pdf" && !pdfFile) return;
     setLoading(true);
     setResult(null);
     setError(null);
     try {
-      const data = await ingestDocument(source.trim(), docText.trim());
+      let data;
+      if (mode === "pdf") {
+        const formData = new FormData();
+        formData.append("file", pdfFile);
+        formData.append("source", source.trim() || pdfFile.name);
+        const response = await fetch("http://127.0.0.1:8000/ingest/pdf", {
+          method: "POST",
+          body: formData,
+        });
+        data = await response.json();
+      } else {
+        data = await ingestDocument(source.trim(), docText.trim());
+      }
       setResult(data);
     } catch {
       setError("Ingestion failed — is the backend running?");
@@ -248,6 +263,31 @@ function Sidebar() {
       <p className="text-[11px] tracking-[0.2em] uppercase text-text-secondary">
         Document Ingestion
       </p>
+
+      {/* mode toggle */}
+      <div className="flex rounded-button overflow-hidden border border-white/10">
+        <button
+          onClick={() => setMode("text")}
+          className={`flex-1 text-[12px] py-1.5 transition-colors ${
+            mode === "text"
+              ? "bg-accent-primary text-white"
+              : "text-text-secondary hover:text-text-primary"
+          }`}
+        >
+          Text
+        </button>
+        <button
+          onClick={() => setMode("pdf")}
+          className={`flex-1 text-[12px] py-1.5 transition-colors ${
+            mode === "pdf"
+              ? "bg-accent-primary text-white"
+              : "text-text-secondary hover:text-text-primary"
+          }`}
+        >
+          PDF
+        </button>
+      </div>
+
 
       {/* inputs */}
       <div className="flex flex-col gap-3">
@@ -272,29 +312,59 @@ function Sidebar() {
           />
         </motion.div>
 
-        <motion.div
-          animate={{
-            boxShadow:
-              focused === "doc"
-                ? "0 0 0 1px #FF0000, 0 0 12px rgba(255,0,0,0.2)"
-                : "0 0 0 1px #2a2a2a",
-          }}
-          className="rounded-card overflow-hidden"
-        >
-          <textarea
-            placeholder="Paste document text here..."
-            value={docText}
-            onChange={(e) => setDocText(e.target.value)}
-            onFocus={() => setFocused("doc")}
-            onBlur={() => setFocused(null)}
-            rows={10}
-            className="w-full bg-white/[0.03] px-3 py-2 text-[13px] text-text-primary placeholder:text-text-secondary focus:outline-none resize-none"
-          />
-        </motion.div>
+        {mode === "text" ? (
+          <motion.div
+            animate={{
+              boxShadow:
+                focused === "doc"
+                  ? "0 0 0 1px #FF0000, 0 0 12px rgba(255,0,0,0.2)"
+                  : "0 0 0 1px #2a2a2a",
+            }}
+            className="rounded-card overflow-hidden"
+          >
+            <textarea
+              placeholder="Paste document text here..."
+              value={docText}
+              onChange={(e) => setDocText(e.target.value)}
+              onFocus={() => setFocused("doc")}
+              onBlur={() => setFocused(null)}
+              rows={10}
+              className="w-full bg-white/[0.03] px-3 py-2 text-[13px] text-text-primary placeholder:text-text-secondary focus:outline-none resize-none"
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            animate={{
+              boxShadow: "0 0 0 1px #2a2a2a",
+            }}
+            className="rounded-card overflow-hidden border border-dashed border-white/20 p-4 flex flex-col items-center gap-3 cursor-pointer"
+            onClick={() => document.getElementById("pdf-upload").click()}
+          >
+            <input
+              id="pdf-upload"
+              type="file"
+              accept=".pdf"
+              className="hidden"
+              onChange={(e) => setPdfFile(e.target.files[0])}
+            />
+            {pdfFile ? (
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-2xl">📄</span>
+                <p className="text-[12px] text-accent-primary font-medium text-center">{pdfFile.name}</p>
+                <p className="text-[11px] text-text-secondary">{(pdfFile.size / 1024).toFixed(1)} KB</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-2xl">⬆️</span>
+                <p className="text-[12px] text-text-secondary text-center">Click to upload PDF</p>
+              </div>
+            )}
+          </motion.div>
+        )}
 
         <button
           onClick={handleIngest}
-          disabled={loading || !source.trim() || !docText.trim()}
+          disabled={loading || (mode === "text" && (!source.trim() || !docText.trim())) || (mode === "pdf" && !pdfFile)}
           className="w-full bg-accent-primary text-white text-[13px] font-semibold py-2.5 rounded-button disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
           style={{ boxShadow: "0 0 18px rgba(255,0,0,0.3)" }}
         >
