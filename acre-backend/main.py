@@ -75,8 +75,10 @@ def query(request: QueryRequest):
 
 @app.get("/graph/stats")
 def graph_stats():
+    graph_data = chunker.get_graph_data()
     return {
         "total_nodes": chunker.graph.number_of_nodes(),
         "total_edges": chunker.graph.number_of_edges(),
-        "nodes": list(chunker.graph.nodes())
+        "nodes": [n["id"] for n in graph_data["nodes"]],
+        "graph": graph_data
     }
