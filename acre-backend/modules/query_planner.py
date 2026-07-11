@@ -1,5 +1,9 @@
+import os
 import json
 import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class QueryPlanner:
@@ -7,19 +11,30 @@ class QueryPlanner:
         self.chunker = graph_chunker
         self.critic = critic
         self.resolver = resolver
-        self.model = "qwen2.5:7b"
-        self.base_url = "http://localhost:11434/api/chat"
+        self.model = "accounts/fireworks/models/qwen3p7-plus"
+        self.base_url = "https://api.fireworks.ai/inference/v1/chat/completions"
+        self.api_key = os.getenv("FIREWORKS_API_KEY")
 
     def _ask_local(self, prompt: str) -> str:
         response = requests.post(
             self.base_url,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
             json={
                 "model": self.model,
                 "messages": [{"role": "user", "content": prompt}],
-                "stream": False
+                "max_tokens": 1000,
+                "temperature": 0.3,
+                "reasoning_effort": "none",
             }
         )
-        return response.json()["message"]["content"]
+        data = response.json()
+        content = data["choices"][0]["message"]["content"]
+        import re
+        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+        return content
 
     def decompose(self, query: str) -> list:
         prompt = f"""Decompose this complex query into 3 atomic sub-questions.
@@ -54,19 +69,63 @@ Return ONLY a JSON array of strings, nothing else:
                 "conflicts": conflict_result["conflict_count"],
                 "resolutions": conflict_result["resolutions"]
             })
+            touched_nodes = []
+            for sa in sub_answers:
+                for c in sa["chunks"]:
+                    touched_nodes.append(c["node"])
 
         # final synthesis
-        synthesis_prompt = f"Original question: {query}\n\n"
+        evidence_block = ""
         for sa in sub_answers:
-            synthesis_prompt += f"Sub-question: {sa['sub_query']}\n"
-            synthesis_prompt += f"Evidence: {[c['context'][:100] for c in sa['chunks']]}\n\n"
-        synthesis_prompt += "Synthesize a final comprehensive answer with references to the evidence."
+            evidence_block += f"- Sub-question: {sa['sub_query']}\n"
+            for c in sa["chunks"]:
+                evidence_block += f"  - Evidence: {c['context'][:200]}\n"
+
+        synthesis_prompt = f"""You are answering this question using only the evidence below: {query}
+
+Evidence from the document:
+{evidence_block}
+
+Write a clear, well-justified answer.
+
+Rules:
+1. Start with one sentence that directly answers the question.
+2. If the question compares two or more things, structure your answer as 3-4 comparison points, each as:
+## [Short aspect name]
+- **[First thing]:** [what it does]
+- **[Second thing]:** [how it differs]
+- **Why it matters:** [practical benefit]
+3. If the question is NOT a comparison, use 2-4 ## headings with short "- " bullets covering different aspects of the topic.
+4. Never list disconnected facts — every point should build toward the question asked.
+5. Keep every bullet under 20 words. No literal backslash-n characters.
+
+After the Markdown answer, add a new line containing exactly ---FLOWCHART--- followed by a JSON array capturing the answer's structure as a diagram:
+- If comparing two things: [{{"from": "Thing A", "relation": "aspect name", "to": "Thing B"}}, ...] — one entry per aspect.
+- If not a comparison: [{{"from": "Main Topic", "relation": "covers", "to": "Aspect Name"}}, ...] — one entry per heading.
+- Keep labels under 4 words. Valid JSON only.
+
+Output only the Markdown answer, then ---FLOWCHART---, then the JSON. Nothing else."""
 
         print("\nSynthesizing final answer...")
-        final_answer = self._ask_local(synthesis_prompt)
+        raw_response = self._ask_local(synthesis_prompt)
+        raw_response = raw_response.replace("\\n", "\n").strip()
 
+        if "---FLOWCHART---" in raw_response:
+            final_answer, flowchart_part = raw_response.split("---FLOWCHART---", 1)
+            final_answer = final_answer.strip()
+            try:
+                start = flowchart_part.find("[")
+                end = flowchart_part.rfind("]") + 1
+                flowchart_edges = json.loads(flowchart_part[start:end])
+            except Exception:
+                flowchart_edges = []
+        else:
+            final_answer = raw_response
+            flowchart_edges = []
+            
         return {
             "query": query,
             "sub_answers": sub_answers,
-            "final_answer": final_answer
+            "final_answer": final_answer,
+            "flowchart_edges": flowchart_edges,
         }

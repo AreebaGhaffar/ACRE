@@ -39,6 +39,7 @@ def root():
 
 @app.post("/ingest")
 def ingest(request: IngestRequest):
+    chunker.reset()  # clear old session data before a fresh ingest
     graph = chunker.chunk(request.text, source=request.source)
     return {
         "status": "ingested",
@@ -49,6 +50,7 @@ def ingest(request: IngestRequest):
 
 @app.post("/ingest/pdf")
 async def ingest_pdf(file: UploadFile = File(...), source: str = Form(None)):
+    chunker.reset()  # clear old session data before a fresh ingest
     pdf_bytes = await file.read()
     text = parser.extract_from_bytes(pdf_bytes)
     source_name = source or file.filename
@@ -66,11 +68,13 @@ async def ingest_pdf(file: UploadFile = File(...), source: str = Form(None)):
 @app.post("/query")
 def query(request: QueryRequest):
     result = planner.execute(request.query)
+
     return {
         "query": result["query"],
         "final_answer": result["final_answer"],
         "sub_queries": [sa["sub_query"] for sa in result["sub_answers"]],
-        "total_conflicts": sum(sa["conflicts"] for sa in result["sub_answers"])
+        "total_conflicts": sum(sa["conflicts"] for sa in result["sub_answers"]),
+        "flowchart_edges": result.get("flowchart_edges", [])
     }
 
 @app.get("/graph/stats")
@@ -82,3 +86,20 @@ def graph_stats():
         "nodes": [n["id"] for n in graph_data["nodes"]],
         "graph": graph_data
     }
+
+@app.get("/graph/subgraph")
+def graph_subgraph(query: str):
+    retrieved = chunker.retrieve(query, k=5)
+    if not retrieved:
+        return {"query": query, "subgraph": {"nodes": [], "edges": []}}
+
+    center_node = retrieved[0]["node"]
+    subgraph = chunker.get_subgraph_for_nodes([center_node], radius=1)
+
+    # cap to at most 8 nodes so it stays readable
+    if len(subgraph["nodes"]) > 8:
+        keep_ids = {n["id"] for n in subgraph["nodes"][:8]}
+        subgraph["nodes"] = [n for n in subgraph["nodes"] if n["id"] in keep_ids]
+        subgraph["edges"] = [e for e in subgraph["edges"] if e["from"] in keep_ids and e["to"] in keep_ids]
+
+    return {"query": query, "subgraph": subgraph}

@@ -5,11 +5,8 @@ services:
     build: .
     ports:
       - "8000:8000"
-    environment:
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-    volumes:
-      - .:/app
+    env_file:
+      - .env
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -20,6 +17,5 @@ services:
       - "8501:8501"
     depends_on:
       - acre
-    environment:
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    env_file:
+      - .env
