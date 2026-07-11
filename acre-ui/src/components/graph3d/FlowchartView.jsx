@@ -4,17 +4,17 @@ import { motion } from "framer-motion";
 
 mermaid.initialize({
   startOnLoad: false,
-  theme: "dark",
+  theme: "base",
   themeVariables: {
-    background: "#0a0a0a",
-    primaryColor: "#1a0000",
+    primaryColor: "#1a1a1a",
+    primaryBorderColor: "#FF4444",
     primaryTextColor: "#ffffff",
-    primaryBorderColor: "#FF0000",
     lineColor: "#FF6B6B",
+    edgeLabelBackground: "#0a0a0a",
     fontFamily: "Inter, sans-serif",
-    fontSize: "14px",
+    fontSize: "15px",
   },
-  flowchart: { curve: "basis", nodeSpacing: 40, rankSpacing: 60 },
+  flowchart: { curve: "basis", nodeSpacing: 70, rankSpacing: 90 },
 });
 
 function sanitizeId(text) {
@@ -31,16 +31,20 @@ function buildMermaidSpec(subgraph) {
     const id = sanitizeId(n.id);
     idMap[n.id] = id;
     const label = n.label.replace(/"/g, "'");
-    lines.push(`  ${id}["${label}"]`);
+    lines.push(`  ${id}(["${label}"])`);
   });
 
-  subgraph.edges.forEach((e) => {
+  subgraph.edges.forEach((e, i) => {
     const from = idMap[e.from];
     const to = idMap[e.to];
     if (!from || !to) return;
     const relation = (e.relation || "related to").replace(/"/g, "'");
-    lines.push(`  ${from} -->|${relation}| ${to}`);
+    const why = e.why ? ` (${e.why.replace(/"/g, "'")})` : "";
+    lines.push(`  ${from} -->|"${relation}${why}"| ${to}`);
   });
+
+  lines.push("  classDef default fill:#161616,stroke:#FF4444,stroke-width:2px,color:#ffffff,font-weight:600");
+  lines.push("  linkStyle default stroke:#FF6B6B,stroke-width:2.5px");
 
   return lines.join("\n");
 }

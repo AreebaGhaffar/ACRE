@@ -31,6 +31,9 @@ class QueryPlanner:
             }
         )
         data = response.json()
+        if "choices" not in data:
+            print("FIREWORKS ERROR:", data)
+            return "[]"
         content = data["choices"][0]["message"]["content"]
         import re
         content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
@@ -99,9 +102,9 @@ Rules:
 4. Never list disconnected facts — every point should build toward the question asked.
 5. Keep every bullet under 20 words. No literal backslash-n characters.
 
-After the Markdown answer, add a new line containing exactly ---FLOWCHART--- followed by a JSON array capturing the answer's structure as a diagram:
-- If comparing two things: [{{"from": "Thing A", "relation": "aspect name", "to": "Thing B"}}, ...] — one entry per aspect.
-- If not a comparison: [{{"from": "Main Topic", "relation": "covers", "to": "Aspect Name"}}, ...] — one entry per heading.
+After the Markdown answer, add a new line containing exactly ---FLOWCHART--- followed by a JSON array:
+- If comparing two things: [{{"from": "Thing A", "relation": "aspect", "to": "Thing B", "why": "short reason, under 8 words"}}, ...]
+- If not a comparison: [{{"from": "Main Topic", "relation": "covers", "to": "Aspect Name", "why": "short reason, under 8 words"}}, ...]
 - Keep labels under 4 words. Valid JSON only.
 
 Output only the Markdown answer, then ---FLOWCHART---, then the JSON. Nothing else."""

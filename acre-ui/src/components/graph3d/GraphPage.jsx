@@ -16,7 +16,7 @@ export default function GraphPage() {
       setSubgraph({
         nodes: [...new Set(edges.flatMap(e => [e.from, e.to]))]
           .map(id => ({ id, label: id, entity_type: "OTHER" })),
-        edges: edges.map(e => ({ from: e.from, to: e.to, relation: e.relation })),
+        edges: edges.map(e => ({ from: e.from, to: e.to, relation: e.relation, why: e.why })),
       });
     }
   }, []);

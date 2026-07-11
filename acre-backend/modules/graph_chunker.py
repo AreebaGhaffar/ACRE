@@ -50,6 +50,9 @@ class SemanticGraphChunker:
             }
         )
         data = response.json()
+        if "choices" not in data:
+            print("FIREWORKS ERROR:", data)
+            return "[]"
         content = data["choices"][0]["message"]["content"]
         import re
         content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()

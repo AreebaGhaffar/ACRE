@@ -1,0 +1,16 @@
+services:
+  backend:
+    build: ./acre-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./acre-backend/.env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build: ./acre-ui
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
