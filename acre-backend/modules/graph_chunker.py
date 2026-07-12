@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-STOP_ENTITY_TYPES = {"CARDINAL", "ORDINAL", "PERCENT", "QUANTITY", "MONEY", "TIME"}
+# STOP_ENTITY_TYPES = {"CARDINAL", "ORDINAL", "PERCENT", "QUANTITY", "MONEY", "TIME"}
+STOP_ENTITY_TYPES = {"ORDINAL", "TIME"}
 
 
 class SemanticGraphChunker:
@@ -47,7 +48,8 @@ class SemanticGraphChunker:
                 "max_tokens": 1000,
                 "temperature": 0.3,
                 "reasoning_effort": "none",
-            }
+            },
+            timeout=30
         )
         data = response.json()
         if "choices" not in data:
@@ -119,10 +121,14 @@ Rules:
                     continue
                 # add nodes if they weren't caught by spaCy but are valid concepts
                 if not self.graph.has_node(frm):
+                    frm_emb = self.embedder.encode(frm, convert_to_tensor=True)
                     self.graph.add_node(frm, label="CONCEPT", entity_type="CONCEPT",
+                                         embedding=frm_emb,
                                          context=text_block, source=source, description=text_block[:120])
                 if not self.graph.has_node(to):
+                    to_emb = self.embedder.encode(to, convert_to_tensor=True)
                     self.graph.add_node(to, label="CONCEPT", entity_type="CONCEPT",
+                                         embedding=to_emb,
                                          context=text_block, source=source, description=text_block[:120])
                 if not self.graph.has_edge(frm, to):
                     self.graph.add_edge(frm, to, relation=relation, sentence=text_block, weight=1.0)
@@ -156,31 +162,50 @@ Rules:
 
     def retrieve(self, query: str, k: int = 5) -> list:
         if len(self.graph.nodes) == 0:
+            print("DEBUG: graph has 0 nodes")
             return []
+
         q_emb = self.embedder.encode(query, convert_to_tensor=True)
         scores = {}
+
+        nodes_with_embedding = 0
         for node, data in self.graph.nodes(data=True):
             if "embedding" in data:
+                nodes_with_embedding += 1
                 sim = torch.cosine_similarity(
-                    q_emb.unsqueeze(0), data["embedding"].unsqueeze(0)
+                    q_emb.unsqueeze(0),
+                    data["embedding"].unsqueeze(0)
                 ).item()
                 scores[node] = sim
+
+        print(f"DEBUG: query='{query}' | total_nodes={len(self.graph.nodes)} | nodes_with_embedding={nodes_with_embedding}")
+
         top_nodes = sorted(scores, key=scores.get, reverse=True)[:k]
+        print(f"DEBUG: top_nodes={top_nodes}")
+
         results = []
+        seen_contexts = set()
         for n in top_nodes:
             neighbors = list(nx.ego_graph(self.graph, n, radius=2).nodes)
             context_parts = []
             for nb in neighbors:
                 ctx = self.graph.nodes[nb].get("context", "")
-                if ctx and ctx not in context_parts:
+                ctx_key = ctx[:80]
+                if ctx and ctx_key not in seen_contexts:
                     context_parts.append(ctx)
-            results.append({
-                "node": n, "score": scores[n],
-                "context": " ".join(context_parts),
-                "source": self.graph.nodes[n].get("source", "unknown")
-            })
-        return results
+                    seen_contexts.add(ctx_key)
+            print(f"DEBUG: node='{n}' | neighbors={len(neighbors)} | context_parts_found={len(context_parts)}")
+            if context_parts:
+                results.append({
+                    "node": n,
+                    "score": scores[n],
+                    "context": " ".join(context_parts),
+                    "source": self.graph.nodes[n].get("source", "unknown")
+                })
 
+        print(f"DEBUG: retrieve() returning {len(results)} results")
+        return results
+    
     def get_subgraph_for_nodes(self, node_names: list, radius: int = 1) -> dict:
         """NEW — returns only the small subgraph relevant to a specific query,
         instead of the entire knowledge graph. Use this for the query-scoped

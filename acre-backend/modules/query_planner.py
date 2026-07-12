@@ -28,7 +28,8 @@ class QueryPlanner:
                 "max_tokens": 1000,
                 "temperature": 0.3,
                 "reasoning_effort": "none",
-            }
+            },
+            timeout=30
         )
         data = response.json()
         if "choices" not in data:
@@ -42,6 +43,7 @@ class QueryPlanner:
     def decompose(self, query: str) -> list:
         prompt = f"""Decompose this complex query into 3 atomic sub-questions.
 Each sub-question must be answerable independently from a document.
+Do NOT expand acronyms or add outside context the user didn't provide — keep sub-questions grounded in the exact terms used in the query.
 Query: {query}
 Return ONLY a JSON array of strings, nothing else:
 ["sub-question 1", "sub-question 2", "sub-question 3"]"""
@@ -62,7 +64,7 @@ Return ONLY a JSON array of strings, nothing else:
         sub_answers = []
         for sq in sub_queries:
             print(f"\nProcessing: '{sq}'")
-            chunks = self.chunker.retrieve(sq, k=3)
+            chunks = self.chunker.retrieve(sq, k=5)
             good_chunks = self.critic.filter_chunks(sq, chunks)
             conflict_result = self.resolver.resolve_all(good_chunks, sq)
 
@@ -82,14 +84,20 @@ Return ONLY a JSON array of strings, nothing else:
         for sa in sub_answers:
             evidence_block += f"- Sub-question: {sa['sub_query']}\n"
             for c in sa["chunks"]:
-                evidence_block += f"  - Evidence: {c['context'][:200]}\n"
+                evidence_block += f"  - Evidence: {c['context'][:500]}\n"
 
-        synthesis_prompt = f"""You are answering this question using only the evidence below: {query}
+        print("=== EVIDENCE BLOCK ===")
+        print(evidence_block)
+        print("=== END EVIDENCE ===")
+
+        synthesis_prompt = f"""You are answering this question using ONLY the evidence below — even if you have other knowledge about this topic from elsewhere, IGNORE it and rely strictly on what's written below: {query}
+
+If the term in the question has a well-known meaning elsewhere (e.g. an acronym, abbreviation, or common phrase) but the evidence below defines it differently or in a specific document context, you MUST follow the evidence's definition, not the commonly known one.
 
 Evidence from the document:
 {evidence_block}
 
-Write a clear, well-justified answer.
+Write a clear, well-reasoned answer — not just a list of facts.
 
 Rules:
 1. Start with one sentence that directly answers the question.
@@ -97,10 +105,10 @@ Rules:
 ## [Short aspect name]
 - **[First thing]:** [what it does]
 - **[Second thing]:** [how it differs]
-- **Why it matters:** [practical benefit]
-3. If the question is NOT a comparison, use 2-4 ## headings with short "- " bullets covering different aspects of the topic.
-4. Never list disconnected facts — every point should build toward the question asked.
-5. Keep every bullet under 20 words. No literal backslash-n characters.
+- **Why it matters:** [the actual reasoning — explain the consequence or tradeoff, not just restate the fact]
+3. If the question is NOT a comparison, use 2-4 ## headings with short "- " bullets. For each bullet, don't just state a fact — briefly explain WHY it's true or WHY it matters, using the evidence as support.
+4. Every point should build a logical case toward the answer, like you're explaining your reasoning to someone, not reciting a summary.
+5. Keep every bullet under 25 words. No literal backslash-n characters.
 
 After the Markdown answer, add a new line containing exactly ---FLOWCHART--- followed by a JSON array:
 - If comparing two things: [{{"from": "Thing A", "relation": "aspect", "to": "Thing B", "why": "short reason, under 8 words"}}, ...]

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Network } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
 import { ingestDocument, runQuery } from "../../api/acre";
@@ -83,15 +84,12 @@ function IdleState() {
           />
         ))}
         <motion.div
-          className="w-20 h-20 rounded-full flex items-center justify-center text-3xl"
-          style={{
-            background: "linear-gradient(135deg, #1a0000, #2d0000)",
-            border: "1px solid rgba(255,0,0,0.3)",
-          }}
+          className="w-20 h-20 rounded-full flex items-center justify-center"
+          style={{ background: "linear-gradient(135deg, #1a0000, #2d0000)", border: "1px solid rgba(255,0,0,0.3)" }}
           animate={{ scale: [1, 1.05, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          🧠
+          <Network size={32} color="#FF6B6B" strokeWidth={1.5} />
         </motion.div>
       </div>
 
@@ -304,7 +302,7 @@ function Sidebar() {
         });
         data = await response.json();
       } else {
-        data = await ingestDocument(source.trim(), docText.trim());
+        data = await ingestDocument(source.trim() || "Pasted Text", docText.trim());
       }
       setResult(data);
     } catch {
@@ -467,11 +465,7 @@ function Sidebar() {
         {/* ingest button */}
         <button
           onClick={handleIngest}
-          disabled={
-            loading ||
-            (mode === "text" && (!source.trim() || !docText.trim())) ||
-            (mode === "pdf" && !pdfFile)
-          }
+            disabled={loading || (mode === "text" && !docText.trim()) || (mode === "pdf" && !pdfFile)}
           style={{
             width: "100%",
             padding: "10px",

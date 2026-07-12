@@ -1,24 +1,41 @@
-import json
+import os
+import re
 import requests
+from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer, util
 
+load_dotenv()
 
 class ConflictResolver:
     def __init__(self):
-        self.model = "qwen2.5:7b"
-        self.base_url = "http://localhost:11434/api/chat"
+        self.model = "accounts/fireworks/models/qwen3p7-plus"
+        self.base_url = "https://api.fireworks.ai/inference/v1/chat/completions"
+        self.api_key = os.getenv("FIREWORKS_API_KEY")
         self.embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
     def _ask_local(self, prompt: str) -> str:
         response = requests.post(
             self.base_url,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
             json={
                 "model": self.model,
                 "messages": [{"role": "user", "content": prompt}],
-                "stream": False
-            }
+                "max_tokens": 500,
+                "temperature": 0.3,
+                "reasoning_effort": "none",
+            },
+            timeout=30
         )
-        return response.json()["message"]["content"]
+        data = response.json()
+        if "choices" not in data:
+            print("FIREWORKS ERROR (resolver):", data)
+            return ""
+        content = data["choices"][0]["message"]["content"]
+        content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+        return content
 
     def detect_conflicts(self, chunks: list) -> list:
         if len(chunks) < 2:

@@ -3,6 +3,8 @@ services:
     build: ./acre-backend
     ports:
       - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
     env_file:
       - ./acre-backend/.env
     extra_hosts:

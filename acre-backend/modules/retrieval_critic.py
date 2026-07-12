@@ -1,4 +1,6 @@
+import os
 import json
+import re
 import requests
 from dotenv import load_dotenv
 
@@ -6,9 +8,10 @@ load_dotenv()
 
 class RetrievalCritic:
     def __init__(self):
-        self.model = "qwen2.5:7b"
-        self.threshold = 0.6
-        self.base_url = "http://localhost:11434/api/chat"
+        self.model = "accounts/fireworks/models/qwen3p7-plus"
+        self.base_url = "https://api.fireworks.ai/inference/v1/chat/completions"
+        self.api_key = os.getenv("FIREWORKS_API_KEY")
+        self.threshold = 0.35
 
     def score_chunk(self, query: str, chunk: str) -> dict:
         prompt = f"""You are a retrieval quality critic.
@@ -27,13 +30,25 @@ Reply ONLY with a JSON object, nothing else:
         try:
             response = requests.post(
                 self.base_url,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
                 json={
                     "model": self.model,
                     "messages": [{"role": "user", "content": prompt}],
-                    "stream": False
-                }
+                    "max_tokens": 200,
+                    "temperature": 0.2,
+                    "reasoning_effort": "none",
+                },
+                timeout=30
             )
-            text = response.json()["message"]["content"]
+            data = response.json()
+            if "choices" not in data:
+                print("FIREWORKS ERROR (critic):", data)
+                return {"final": 0.0, "passed": False}
+            text = data["choices"][0]["message"]["content"]
+            text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
             start = text.find("{")
             end = text.find("}") + 1
             scores = json.loads(text[start:end])
