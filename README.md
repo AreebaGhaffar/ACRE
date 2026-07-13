@@ -103,7 +103,8 @@ ACRE/
 
 Inference runs on **Fireworks AI**, serving models on AMD Instinct GPUs. Development and testing also validated direct AMD GPU access on **AMD Developer Cloud** (ROCm + PyTorch), confirmed via `rocm-smi` and `torch.cuda.is_available()`.
 
-![AMD GPU Proof](./docs/amd-gpu.png)
+![AMD GPU Proof](./docs/amd-backend-running.png)
+![AMD GPU Proof](./docs/amd-live-check.png)
 
 ## Quick Start
 
