@@ -1,22 +1,18 @@
 # 🧠 ACRE — Adaptive Cognitive RAG Engine
 
-> **AMD Developer Hackathon: ACT II** | Track 1 Submission  
-> Built on AMD ROCm | Powered by Qwen 2.5 | Deployed with Docker
+**Most RAG systems retrieve. ACRE reasons.**
 
----
+Built for AMD Developer Hackathon: ACT II — Unicorn Track 🦄
 
-## 🚀 What is ACRE?
+![Landing](path/to/landing.png)
 
-ACRE is a next-generation RAG (Retrieval-Augmented Generation) system that solves the **4 fundamental failures** of traditional RAG:
+## The Problem
 
-| Problem with Normal RAG | How ACRE Solves It |
-|--------------------------|-------------------|
-| Fixed-size chunking breaks context | **Semantic Graph Chunker** — builds a knowledge graph of concepts |
-| No chunk quality validation | **Retrieval Critic** — scores every chunk before it reaches the LLM |
-| Silent hallucination on contradictions | **Conflict Resolver** — detects and resolves contradictions with citations |
-| Single-shot retrieval for complex questions | **Query Planner** — decomposes questions into sub-queries, retrieves iteratively |
+Normal RAG retrieves a few chunks, glues them together, and hopes. It never checks evidence quality, never notices conflicting sources, never breaks down hard questions — and never shows you *why*.
 
----
+## What is ACRE?
+
+ACRE decomposes questions, retrieves evidence, critically scores it, resolves contradictions, and explains its reasoning — then renders that reasoning as a **live concept flowchart**, on any topic, any document.
 
 ## 🏗️ Architecture
 
@@ -36,67 +32,84 @@ Raw Documents (PDF/TXT/MD)
 ✨  Final Answer with Citations
 ```
 
----
+## 4 Novel Modules
 
-## 🔧 4 Novel Modules
+| Module | Does | Why it matters |
+|---|---|---|
+| 🧩 Query Planner | Decomposes questions into sub-questions | Every part gets answered |
+| 🕸️ Graph Chunker | LLM-based concept graph, not flat chunks | Captures relationships, not blobs |
+| 🔬 Retrieval Critic | Scores chunks: relevance, coherence, freshness, specificity | Filters noise before synthesis |
+| ⚡ Conflict Resolver | Detects + resolves contradicting sources | No silent guessing |
 
-### Module 1 — Semantic Graph Chunker
-Instead of splitting text every 512 tokens, ACRE extracts **concepts and relationships** using NLP, building a knowledge graph where:
-- Each **node** = a concept/entity
-- Each **edge** = a relationship between concepts
-- Retrieval follows **graph paths**, not just keyword similarity
+## ACRE vs Normal RAG
 
-### Module 2 — Retrieval Critic
-A local Qwen 2.5 7B model that scores every retrieved chunk on **4 dimensions**:
-- **Relevance** (40%) — does it answer the query?
-- **Coherence** (20%) — is it internally consistent?
-- **Freshness** (20%) — is it current and uncontradicted?
-- **Specificity** (20%) — does it contain concrete facts?
+| | Normal RAG | ACRE |
+|---|---|---|
+| Chunking | Flat text splits | Semantic knowledge graph |
+| Retrieval | Top-k, unfiltered | Critic-scored |
+| Conflicts | Ignored | Detected + resolved |
+| Complex Qs | One flat query | Decomposed |
+| Output | Text | Text + flowchart |
 
-Chunks scoring below **0.6** are filtered out before reaching the LLM.
+## Query Interface
 
-### Module 3 — Conflict Resolver
-When two chunks contradict each other, ACRE:
-1. Detects the conflict using semantic similarity
-2. Identifies which documents the chunks came from
-3. Resolves the contradiction with explicit citations
+Ask a question, watch the 4-module pipeline run live, get a reasoned answer.
 
-No more silent hallucinated merges.
+![Query Page](path/to/query.png)
 
-### Module 4 — Query Planner
-Decomposes complex questions into atomic sub-queries:
-```
-"How did AMD's acquisition of Xilinx affect their AI strategy?"
-    ↓
-1. What did AMD acquire from Xilinx?
-2. How does Xilinx technology relate to AMD's AI products?
-3. What is AMD's current AI chip strategy?
-```
-Each sub-query retrieves, gets criticized, and gets resolved independently.
+## Concept Flowchart
 
----
+Every answer also renders as a clean, topic-agnostic flowchart generated from the model's own reasoning.
 
-## 💻 Tech Stack
+![Flowchart](path/to/flowchart.png)
+
+## Tech Stack
 
 | Component | Technology |
-|-----------|-----------|
-| GPU Compute | AMD ROCm |
-| LLM (local) | Qwen 2.5 7B via Ollama |
+|---|---|
+| LLM | Qwen3.7 Plus via Fireworks AI |
+| Inference Compute | AMD Instinct GPUs (via Fireworks) + validated AMD ROCm access (AMD Developer Cloud) |
 | Embeddings | sentence-transformers/all-MiniLM-L6-v2 |
-| NLP | spaCy en_core_web_trf |
-| Graph Engine | NetworkX |
-| Vector Store | Qdrant |
-| API | FastAPI |
-| Demo UI | Streamlit |
+| NLP | spaCy `en_core_web_trf` |
+| Graph Engine | NetworkX (in-memory) |
+| PDF Parsing | PyMuPDF |
+| Backend API | FastAPI |
+| Frontend | React, Vite, Tailwind, Framer Motion, Mermaid.js |
 | Container | Docker + docker-compose |
 
----
+## Project Structure
 
-## ⚡ Quick Start
+```
+ACRE/
+├── acre-backend/
+│   ├── main.py              # FastAPI app, routes
+│   ├── modules/
+│   │   ├── query_planner.py       # decomposition + synthesis
+│   │   ├── graph_chunker.py       # knowledge graph + retrieval
+│   │   ├── retrieval_critic.py    # chunk scoring
+│   │   ├── conflict_resolver.py   # contradiction detection
+│   │   └── pdf_parser.py          # PDF text extraction
+│   ├── Dockerfile
+│   └── requirements.txt
+├── acre-ui/
+│   ├── src/components/
+│   │   ├── query/            # Query page + pipeline UI
+│   │   └── graph3d/           # Flowchart page
+│   └── Dockerfile
+└── docker-compose.yml
+```
+
+## AMD ROCm Integration
+
+Inference runs on **Fireworks AI**, serving models on AMD Instinct GPUs. Development and testing also validated direct AMD GPU access on **AMD Developer Cloud** (ROCm + PyTorch), confirmed via `rocm-smi` and `torch.cuda.is_available()`.
+
+![AMD GPU Proof](path/to/amd-gpu.png)
+
+## Quick Start
 
 ### Prerequisites
 - Docker & Docker Compose
-- Ollama with Qwen 2.5 7B
+- Fireworks AI API key ([get one here](https://fireworks.ai))
 
 ### 1. Clone the repository
 ```bash
@@ -104,9 +117,9 @@ git clone https://github.com/AreebaGhaffar/ACRE.git
 cd ACRE
 ```
 
-### 2. Pull the local model
+### 2. Add your API key
 ```bash
-ollama pull qwen2.5:7b
+echo "FIREWORKS_API_KEY=your_key_here" > acre-backend/.env
 ```
 
 ### 3. Start with Docker
@@ -114,67 +127,29 @@ ollama pull qwen2.5:7b
 docker-compose up --build
 ```
 
-### 4. Access the apps
-- **API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **Demo UI**: http://localhost:8501
+### 4. Access the app
+- **UI:** http://localhost:5173
+- **API:** http://localhost:8000
+- **API Docs:** http://localhost:8000/docs
 
----
+![Docker Running](path/to/docker-screenshot.png)
 
-## 📡 API Endpoints
+## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | Health check |
-| POST | `/ingest` | Ingest a document into the knowledge graph |
-| POST | `/query` | Run the full ACRE pipeline on a question |
-| GET | `/graph/stats` | Get knowledge graph statistics |
-
-### Example: Ingest a document
-```bash
-curl -X POST http://localhost:8000/ingest \
-  -H "Content-Type: application/json" \
-  -d '{"text": "AMD acquired Xilinx in 2022 for 49 billion dollars.", "source": "amd_doc"}'
-```
-
-### Example: Query ACRE
-```bash
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"query": "How did AMD compete with NVIDIA in AI?"}'
-```
-
----
-
-## 🎯 AMD ROCm Integration
-
-ACRE is designed to run on AMD GPUs via ROCm:
-- **Embeddings** run on AMD GPU via PyTorch ROCm
-- **Local LLM inference** accelerated by AMD GPU
-- **Parallel graph traversal** optimized for AMD architecture
-- **Docker image** based on `rocm/pytorch:latest`
-
-On AMD cloud GPU, inference is **10-20x faster** than CPU.
-
----
-
-## 📊 ACRE vs Normal RAG
-
-| Feature | Normal RAG | ACRE |
-|---------|-----------|------|
-| Chunking | Fixed 512 tokens | Semantic graph nodes |
-| Retrieval | Passive similarity | Query-planned, multi-hop |
-| Chunk quality | No validation | Critic scores each chunk |
-| Contradictions | Silently merged | Detected & resolved |
-| Complex questions | Single retrieval | Iterative retrieve-reason |
-| AMD GPU use | CPU-heavy | Parallel graph on ROCm |
+| Method | Route | Description |
+|---|---|---|
+| POST | `/ingest` | Ingest raw text |
+| POST | `/ingest/pdf` | Ingest a PDF |
+| POST | `/query` | Run full pipeline |
+| GET | `/graph/stats` | Full graph data |
+| GET | `/graph/subgraph` | Query-scoped flowchart |
 
 ---
 
 ## 👤 Team
 
 Built for **AMD Developer Hackathon: ACT II** (July 6-11, 2026)  
-by **Areeba Ghaffar**
+by **Areeba Ghaffar** and **Maryam Malik**
 
 ---
 
