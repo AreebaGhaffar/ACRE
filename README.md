@@ -132,7 +132,7 @@ docker-compose up --build
 - **API:** http://localhost:8000
 - **API Docs:** http://localhost:8000/docs
 
-![Docker Running](path/to/docker-screenshot.png)
+![Docker Running](./docs/docker.png)
 
 ## API Endpoints
 
