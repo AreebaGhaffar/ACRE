@@ -4,7 +4,7 @@
 
 Built for AMD Developer Hackathon: ACT II — Unicorn Track 🦄
 
-![Landing](path/to/landing.png)
+![Landing](./docs/landing.png)
 
 ## The Problem
 
@@ -55,13 +55,13 @@ Raw Documents (PDF/TXT/MD)
 
 Ask a question, watch the 4-module pipeline run live, get a reasoned answer.
 
-![Query Page](path/to/query.png)
+![Query Page](./docs/query.png)
 
 ## Concept Flowchart
 
 Every answer also renders as a clean, topic-agnostic flowchart generated from the model's own reasoning.
 
-![Flowchart](path/to/flowchart.png)
+![Flowchart](./docs/flowchart.png)
 
 ## Tech Stack
 
@@ -103,7 +103,7 @@ ACRE/
 
 Inference runs on **Fireworks AI**, serving models on AMD Instinct GPUs. Development and testing also validated direct AMD GPU access on **AMD Developer Cloud** (ROCm + PyTorch), confirmed via `rocm-smi` and `torch.cuda.is_available()`.
 
-![AMD GPU Proof](path/to/amd-gpu.png)
+![AMD GPU Proof](./docs/amd-gpu.png)
 
 ## Quick Start
 
